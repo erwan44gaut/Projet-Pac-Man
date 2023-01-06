@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import font  as tkfont
 import numpy as np
  
+#region Initialisation
 
 ##########################################################################
 #
@@ -10,6 +11,9 @@ import numpy as np
 #
 #########################################################################
  
+# Score
+Score = 0
+
 # Plan du labyrinthe
 
 # 0 vide
@@ -22,6 +26,7 @@ def CreateArray(L):
    T = T.transpose()  ## ainsi, on peut écrire TBL[x][y]
    return T
 
+# Création de l'environnement de jeu
 TBL = CreateArray([
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
@@ -36,14 +41,17 @@ TBL = CreateArray([
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1] ]);
 # attention, on utilise TBL[x][y] 
         
-HAUTEUR = TBL.shape [1]      
-LARGEUR = TBL.shape [0]  
+LARGEUR = TBL.shape [0]
+HAUTEUR = TBL.shape [1]
 
 # placements des pacgums et des fantomes
-
-def PlacementsGUM():  # placements des pacgums
-   GUM = np.zeros(TBL.shape,dtype=np.int32)
+# La fonction 'PlacementsGUM' parcourt la carte TBL et qui crée une nouvelle matrice GUM
+# qui contient un 1 à chaque case où il y a un pac-gum sur la carte TBL.
+# La matrice GUM est utilisée pour savoir où se trouvent les pac-gums sur la carte.
+def PlacementsGUM(): # placements des pacgums
+   GUM = np.zeros(TBL.shape, dtype=np.int32)
    
+   # Met un 1 quand il y a un bonbon
    for x in range(LARGEUR):
       for y in range(HAUTEUR):
          if ( TBL[x][y] == 0):
@@ -51,23 +59,19 @@ def PlacementsGUM():  # placements des pacgums
    return GUM
             
 GUM = PlacementsGUM()   
-   
-   
-      
 
+# Initialisation de la position de départ de Pac-Man
 PacManPos = [5,5]
 
 Ghosts  = []
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "pink"  ]   )
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "orange"] )
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  ]   )
-Ghosts.append(  [LARGEUR//2, HAUTEUR // 2 ,  "red"   ]     )         
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  ] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange"] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  ] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   ] )         
 
-
-
-##############################################################################
-#
-#  Debug : ne pas toucher (affichage des valeurs autours dans les cases
+#########################################################################
+# Debug : ne pas toucher (affichage des valeurs autours dans les cases) #
+#########################################################################
 
 LTBL = 100
 TBL1 = [["" for i in range(LTBL)] for j in range(LTBL)]
@@ -90,26 +94,28 @@ def SetInfo2(x,y,info):
    if x >= LTBL : return
    if y >= LTBL : return
    TBL2[x][y] = info
-   
+
+#endregion
+
+#region Affichage
+
+###########################################################################
+#                                                                         #
+# Partie II :  AFFICHAGE -- NE PAS MODIFIER  jusqu'à la prochaine section #
+#                                                                         #
+###########################################################################
 
 
-##############################################################################
-#
-#   Partie II :  AFFICHAGE -- NE PAS MODIFIER  jusqu'à la prochaine section
-#
-##############################################################################
 
- 
-
-ZOOM = 40   # taille d'une case en pixels
-EPAISS = 8  # epaisseur des murs bleus en pixels
+ZOOM = 40 # taille d'une case en pixels
+EPAISS = 12 # epaisseur des murs bleus en pixels
 
 screeenWidth = (LARGEUR+1) * ZOOM  
 screenHeight = (HAUTEUR+2) * ZOOM
 
 Window = tk.Tk()
-Window.geometry(str(screeenWidth)+"x"+str(screenHeight))   # taille de la fenetre
-Window.title("ESIEE - PACMAN")
+Window.geometry(str(screeenWidth)+"x"+str(screenHeight)) # taille de la fenetre
+Window.title("SMARTMAN")
 
 # gestion de la pause
 
@@ -146,7 +152,6 @@ def AfficherPage(id):
     global PageActive
     PageActive = id
     ListePages[id].tkraise()
-    
     
 def WindowAnim():
     PlayOneTurn()
@@ -269,26 +274,32 @@ def Affiche(PacmanColor,message):
    
    canvas.create_text(screeenWidth // 2, screenHeight- 50 , text = "PAUSE : PRESS SPACE", fill ="yellow", font = PoliceTexte)
    canvas.create_text(screeenWidth // 2, screenHeight- 20 , text = message, fill ="yellow", font = PoliceTexte)
+   canvas.create_text(screeenWidth - 50, screenHeight- 20 , text = Score, fill ="yellow", font = PoliceTexte)
    
  
 AfficherPage(0)
-            
-#########################################################################
-#
-#  Partie III :   Gestion de partie   -   placez votre code dans cette section
-#
-#########################################################################
 
-      
+#endregion
+
+#region Partie
+
+###############################################################################
+#                                                                             #
+# Partie III :   Gestion de partie   -   placez votre code dans cette section #
+#                                                                             #
+###############################################################################
+
+# Renvoie la liste des mouvements possibles de Pac Man
 def PacManPossibleMove():
    L = []
    x,y = PacManPos
-   if ( TBL[x  ][y-1] == 0 ): L.append((0,-1))
-   if ( TBL[x  ][y+1] == 0 ): L.append((0, 1))
-   if ( TBL[x+1][y  ] == 0 ): L.append(( 1,0))
-   if ( TBL[x-1][y  ] == 0 ): L.append((-1,0))
+   if ( TBL[ x ][y-1] == 0 ): L.append((0,-1))
+   if ( TBL[ x ][y+1] == 0 ): L.append((0, 1))
+   if ( TBL[x+1][ y ] == 0 ): L.append(( 1,0))
+   if ( TBL[x-1][ y ] == 0 ): L.append((-1,0))  
    return L
-   
+
+# Renvoie la liste des mouvements possibles d'un fantome
 def GhostsPossibleMove(x,y):
    L = []
    if ( TBL[x  ][y-1] == 2 ): L.append((0,-1))
@@ -296,16 +307,38 @@ def GhostsPossibleMove(x,y):
    if ( TBL[x+1][y  ] == 2 ): L.append(( 1,0))
    if ( TBL[x-1][y  ] == 2 ): L.append((-1,0))
    return L
-   
+
+# def CoordPossibleMove(x, y):
+#    L = []
+#    if ( TBL[x  ][y-1] != 1 ): L.append((0,-1))
+#    if ( TBL[x  ][y+1] == 0 ): L.append((0, 1))
+#    if ( TBL[x+1][y  ] == 2 ): L.append(( 1,0))
+#    if ( TBL[x-1][y  ] == 2 ): L.append((-1,0))
+#    return L
+
+def GenerateDjikstraMap():
+   map = []
+   for y in range(HAUTEUR):
+      map[y] = []
+      for x in range(LARGEUR):
+         pass
+
+
 def IAPacman():
-   global PacManPos, Ghosts
-   #deplacement Pacman
+   global PacManPos, Ghosts, Score
+   # déplacement Pacman
    L = PacManPossibleMove()
    choix = random.randrange(len(L))
    PacManPos[0] += L[choix][0]
    PacManPos[1] += L[choix][1]
    
-   # juste pour montrer comment on se sert de la fonction SetInfo1
+   # Position x du Pac-Man : PacManPos[0]
+   # Position y du Pac-Man : PacManPos[1] 
+   if GUM[PacManPos[0]][PacManPos[1]] == 1:
+      Score += 100
+      GUM[PacManPos[0]][PacManPos[1]] = 0
+      
+   # Permet d'afficher des informations sur la grille
    for x in range(LARGEUR):
       for y in range(HAUTEUR):
          info = x
@@ -313,22 +346,15 @@ def IAPacman():
          elif x % 3 == 2 : info = ""
          SetInfo1(x,y,info)
    
- 
-   
+# Déplacement des fantomes
 def IAGhosts():
-   #deplacement Fantome
    for F in Ghosts:
       L = GhostsPossibleMove(F[0],F[1])
       choix = random.randrange(len(L))
       F[0] += L[choix][0]
       F[1] += L[choix][1]
-      
-  
- 
 
- 
-#  Boucle principale de votre jeu appelée toutes les 500ms
-
+# Boucle principale de votre jeu appelée toutes les 500ms
 iteration = 0
 def PlayOneTurn():
    global iteration
@@ -339,16 +365,8 @@ def PlayOneTurn():
       else:                     IAGhosts()
    
    Affiche(PacmanColor = "yellow", message = "message")  
- 
- 
-###########################################:
-#  demarrage de la fenetre - ne pas toucher
 
+#endregion
+
+# Démarrage de la fenêtre - ne pas toucher
 Window.mainloop()
-
- 
-   
-   
-    
-   
-   
