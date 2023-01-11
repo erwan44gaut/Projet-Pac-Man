@@ -2,7 +2,7 @@ import random
 import tkinter as tk
 from tkinter import font  as tkfont
 import numpy as np
- 
+import math
 #region Initialisation
 
 ##########################################################################
@@ -317,11 +317,23 @@ def GhostsPossibleMove(x,y):
 #    return L
 
 def GenerateDjikstraMap():
+   # map = {}
+   # for x in range(LARGEUR):
+   #    for y in range(HAUTEUR):
+   #       map[f"{x},{y}"] = {}
+   #       map[f"{x},{y}"][f"{x},{y-1}"] = 1 if (TBL[x][y-1] == 0) else math.INF
+   #       map[f"{x},{y}"][f"{x},{y+1}"] = 1 if (TBL[x][y+1] == 0) else math.INF
+   #       map[f"{x},{y}"][f"{x-1},{y}"] = 1 if (TBL[x-1][y] == 0) else math.INF
+   #       map[f"{x},{y}"][f"{x+1},{y}"] = 1 if (TBL[x+1][y] == 0) else math.INF
+
    map = []
    for y in range(HAUTEUR):
-      map[y] = []
+      map.append([])
       for x in range(LARGEUR):
-         pass
+         map[y].append(1 if TBL[x][y] == 0 else math.inf)
+         
+   for row in map:
+      print(row)
 
 
 def IAPacman():
@@ -369,4 +381,5 @@ def PlayOneTurn():
 #endregion
 
 # Démarrage de la fenêtre - ne pas toucher
+GenerateDjikstraMap()
 Window.mainloop()
