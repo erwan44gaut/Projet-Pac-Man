@@ -44,30 +44,60 @@ TBL = CreateArray([
 LARGEUR = TBL.shape [0]
 HAUTEUR = TBL.shape [1]
 
+#region generateMaps
+
 # placements des pacgums et des fantomes
 # La fonction 'PlacementsGUM' parcourt la carte TBL et qui crée une nouvelle matrice GUM
 # qui contient un 1 à chaque case où il y a un pac-gum sur la carte TBL.
 # La matrice GUM est utilisée pour savoir où se trouvent les pac-gums sur la carte.
-def PlacementsGUM(): # placements des pacgums
-   GUM = np.zeros(TBL.shape, dtype=np.int32)
-   
-   # Met un 1 quand il y a un bonbon
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR):
-         if ( TBL[x][y] == 0):
-            GUM[x][y] = 1
-   return GUM
-            
-GUM = PlacementsGUM()   
+
+def generateGumMap():
+    GUM = np.zeros(TBL.shape, dtype=np.int32)
+    GUM[4][3] = 1
+    GUM[1][1] = 1
+    # Met un 1 quand il y a un bonbon
+    # for x in range(LARGEUR):
+    #     for y in range(HAUTEUR):
+    #         if ( TBL[x][y] == 0):
+    #             GUM[x][y] = 1
+    return GUM
+
+GUM = generateGumMap()   
+
+def generateWeightMap():
+    map = []
+    for y in range(HAUTEUR):
+        map.append([])
+        for x in range(LARGEUR):
+            map[y].append(1 if TBL[x][y] == 0 else math.inf)
+    return map
+
+def generateVisitedMap():
+    map = []
+    for y in range(HAUTEUR):
+        map.append([])
+        for x in range(LARGEUR):
+            map[y].append(False)
+    return map
+
+def generateDistMap():
+    map = []
+    for y in range(HAUTEUR):
+        map.append([])
+        for x in range(LARGEUR):
+            map[y].append(math.inf)
+    return map
+
+#endregion
 
 # Initialisation de la position de départ de Pac-Man
 PacManPos = [5,5]
 
 Ghosts  = []
-Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  ] )
-Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange"] )
-Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  ] )
-Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   ] )         
+# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  ] )
+# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange"] )
+# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  ] )
+# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   ] )         
 
 #########################################################################
 # Debug : ne pas toucher (affichage des valeurs autours dans les cases) #
@@ -109,6 +139,7 @@ def SetInfo2(x,y,info):
 
 ZOOM = 40 # taille d'une case en pixels
 EPAISS = 12 # epaisseur des murs bleus en pixels
+FRAMETIME = 50
 
 screeenWidth = (LARGEUR+1) * ZOOM  
 screenHeight = (HAUTEUR+2) * ZOOM
@@ -152,10 +183,10 @@ def AfficherPage(id):
     global PageActive
     PageActive = id
     ListePages[id].tkraise()
-    
+   
 def WindowAnim():
     PlayOneTurn()
-    Window.after(333,WindowAnim)
+    Window.after(FRAMETIME,WindowAnim)
 
 Window.after(100,WindowAnim)
 
@@ -176,7 +207,7 @@ canvas.configure(background='black')
 
 
 def To(coord):
-   return coord * ZOOM + ZOOM 
+    return coord * ZOOM + ZOOM 
    
 # dessine l'ensemble des éléments du jeu par dessus le décor
 
@@ -185,96 +216,95 @@ animPacman = [ 5,10,15,10,5]
 
 
 def Affiche(PacmanColor,message):
-   global anim_bouche
+    global anim_bouche
+    
+    def CreateCircle(x,y,r,coul):
+        canvas.create_oval(x-r,y-r,x+r,y+r, fill=coul, width  = 0)
    
-   def CreateCircle(x,y,r,coul):
-      canvas.create_oval(x-r,y-r,x+r,y+r, fill=coul, width  = 0)
-   
-   canvas.delete("all")
+    canvas.delete("all")
       
       
-   # murs
-   
-   for x in range(LARGEUR-1):
-      for y in range(HAUTEUR):
-         if ( TBL[x][y] == 1 and TBL[x+1][y] == 1 ):
-            xx = To(x)
-            xxx = To(x+1)
-            yy = To(y)
-            canvas.create_line(xx,yy,xxx,yy,width = EPAISS,fill="blue")
+    # murs
+    
+    for x in range(LARGEUR-1):
+        for y in range(HAUTEUR):
+            if ( TBL[x][y] == 1 and TBL[x+1][y] == 1 ):
+                xx = To(x)
+                xxx = To(x+1)
+                yy = To(y)
+                canvas.create_line(xx,yy,xxx,yy,width = EPAISS,fill="blue")
 
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR-1):
-         if ( TBL[x][y] == 1 and TBL[x][y+1] == 1 ):
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR-1):
+            if ( TBL[x][y] == 1 and TBL[x][y+1] == 1 ):
+                xx = To(x) 
+                yy = To(y)
+                yyy = To(y+1)
+                canvas.create_line(xx,yy,xx,yyy,width = EPAISS,fill="blue")
+                
+    # pacgum
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR):
+            if ( GUM[x][y] == 1):
+                xx = To(x) 
+                yy = To(y)
+                e = 5
+                canvas.create_oval(xx-e,yy-e,xx+e,yy+e,fill="orange")
+                
+    #extra info
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR):
             xx = To(x) 
-            yy = To(y)
-            yyy = To(y+1)
-            canvas.create_line(xx,yy,xx,yyy,width = EPAISS,fill="blue")
+            yy = To(y) - 11
+            txt = TBL1[x][y]
+            canvas.create_text(xx,yy, text = txt, fill ="white", font=("Purisa", 8)) 
             
-   # pacgum
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR):
-         if ( GUM[x][y] == 1):
-            xx = To(x) 
-            yy = To(y)
-            e = 5
-            canvas.create_oval(xx-e,yy-e,xx+e,yy+e,fill="orange")
-            
-   #extra info
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR):
-         xx = To(x) 
-         yy = To(y) - 11
-         txt = TBL1[x][y]
-         canvas.create_text(xx,yy, text = txt, fill ="white", font=("Purisa", 8)) 
-         
-   #extra info 2
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR):
-         xx = To(x) + 10
-         yy = To(y) 
-         txt = TBL2[x][y]
-         canvas.create_text(xx,yy, text = txt, fill ="yellow", font=("Purisa", 8)) 
+    #extra info 2
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR):
+            xx = To(x) + 10
+            yy = To(y) 
+            txt = TBL2[x][y]
+            canvas.create_text(xx,yy, text = txt, fill ="yellow", font=("Purisa", 8)) 
          
   
-   # dessine pacman
-   xx = To(PacManPos[0]) 
-   yy = To(PacManPos[1])
-   e = 20
-   anim_bouche = (anim_bouche+1)%len(animPacman)
-   ouv_bouche = animPacman[anim_bouche] 
-   tour = 360 - 2 * ouv_bouche
-   canvas.create_oval(xx-e,yy-e, xx+e,yy+e, fill = PacmanColor)
-   canvas.create_polygon(xx,yy,xx+e,yy+ouv_bouche,xx+e,yy-ouv_bouche, fill="black")  # bouche
+    # dessine pacman
+    xx = To(PacManPos[0]) 
+    yy = To(PacManPos[1])
+    e = 20
+    anim_bouche = (anim_bouche+1)%len(animPacman)
+    ouv_bouche = animPacman[anim_bouche] 
+    tour = 360 - 2 * ouv_bouche
+    canvas.create_oval(xx-e,yy-e, xx+e,yy+e, fill = PacmanColor)
+    canvas.create_polygon(xx,yy,xx+e,yy+ouv_bouche,xx+e,yy-ouv_bouche, fill="black")  # bouche
    
-  
-   #dessine les fantomes
-   dec = -3
-   for P in Ghosts:
-      xx = To(P[0]) 
-      yy = To(P[1])
-      e = 16
+    
+    #dessine les fantomes
+    dec = -3
+    for P in Ghosts:
+        xx = To(P[0]) 
+        yy = To(P[1])
+        e = 16
+        
+        coul = P[2]
+        # corps du fantome
+        CreateCircle(dec+xx,dec+yy-e+6,e,coul)
+        canvas.create_rectangle(dec+xx-e,dec+yy-e,dec+xx+e+1,dec+yy+e, fill=coul, width  = 0)
+        
+        # oeil gauche
+        CreateCircle(dec+xx-7,dec+yy-8,5,"white")
+        CreateCircle(dec+xx-7,dec+yy-8,3,"black")
+        
+        # oeil droit
+        CreateCircle(dec+xx+7,dec+yy-8,5,"white")
+        CreateCircle(dec+xx+7,dec+yy-8,3,"black")
+        
+        dec += 3
       
-      coul = P[2]
-      # corps du fantome
-      CreateCircle(dec+xx,dec+yy-e+6,e,coul)
-      canvas.create_rectangle(dec+xx-e,dec+yy-e,dec+xx+e+1,dec+yy+e, fill=coul, width  = 0)
-      
-      # oeil gauche
-      CreateCircle(dec+xx-7,dec+yy-8,5,"white")
-      CreateCircle(dec+xx-7,dec+yy-8,3,"black")
-       
-      # oeil droit
-      CreateCircle(dec+xx+7,dec+yy-8,5,"white")
-      CreateCircle(dec+xx+7,dec+yy-8,3,"black")
-      
-      dec += 3
-      
-   # texte  
-   
-   canvas.create_text(screeenWidth // 2, screenHeight- 50 , text = "PAUSE : PRESS SPACE", fill ="yellow", font = PoliceTexte)
-   canvas.create_text(screeenWidth // 2, screenHeight- 20 , text = message, fill ="yellow", font = PoliceTexte)
-   canvas.create_text(screeenWidth - 50, screenHeight- 20 , text = Score, fill ="yellow", font = PoliceTexte)
+    # texte  
+    canvas.create_text(screeenWidth // 2, screenHeight- 50 , text = "PAUSE : PRESS SPACE", fill ="yellow", font = PoliceTexte)
+    canvas.create_text(screeenWidth // 2, screenHeight- 20 , text = message, fill ="yellow", font = PoliceTexte)
+    canvas.create_text(screeenWidth - 50, screenHeight- 20 , text = Score, fill ="yellow", font = PoliceTexte)
    
  
 AfficherPage(0)
@@ -290,78 +320,135 @@ AfficherPage(0)
 ###############################################################################
 
 # Renvoie la liste des mouvements possibles de Pac Man
-def PacManPossibleMove():
-   L = []
-   x,y = PacManPos
-   if ( TBL[ x ][y-1] == 0 ): L.append((0,-1))
-   if ( TBL[ x ][y+1] == 0 ): L.append((0, 1))
-   if ( TBL[x+1][ y ] == 0 ): L.append(( 1,0))
-   if ( TBL[x-1][ y ] == 0 ): L.append((-1,0))  
-   return L
+def PacManPossibleMoves():
+    L = []
+    x,y = PacManPos
+    if ( TBL[ x ][y-1] == 0 ): L.append((0,-1))
+    if ( TBL[ x ][y+1] == 0 ): L.append((0, 1))
+    if ( TBL[x+1][ y ] == 0 ): L.append(( 1,0))
+    if ( TBL[x-1][ y ] == 0 ): L.append((-1,0))  
+    return L
 
 # Renvoie la liste des mouvements possibles d'un fantome
-def GhostsPossibleMove(x,y):
-   L = []
-   if ( TBL[x  ][y-1] == 2 ): L.append((0,-1))
-   if ( TBL[x  ][y+1] == 2 ): L.append((0, 1))
-   if ( TBL[x+1][y  ] == 2 ): L.append(( 1,0))
-   if ( TBL[x-1][y  ] == 2 ): L.append((-1,0))
-   return L
+def GhostsPossibleMoves(x,y):
+    L = []
+    if ( TBL[x  ][y-1] == 2 ): L.append((0,-1))
+    if ( TBL[x  ][y+1] == 2 ): L.append((0, 1))
+    if ( TBL[x+1][y  ] == 2 ): L.append(( 1,0))
+    if ( TBL[x-1][y  ] == 2 ): L.append((-1,0))
+    return L
 
-# def CoordPossibleMove(x, y):
-#    L = []
-#    if ( TBL[x  ][y-1] != 1 ): L.append((0,-1))
-#    if ( TBL[x  ][y+1] == 0 ): L.append((0, 1))
-#    if ( TBL[x+1][y  ] == 2 ): L.append(( 1,0))
-#    if ( TBL[x-1][y  ] == 2 ): L.append((-1,0))
-#    return L
+# Renvoie le meilleur mouvement parmi une liste en fonction d'une carte de distances
+def GetBestMove(distMap, pos, moves):
+    min = math.inf
+    bestMove = pos
+    x, y = pos
+    
+    for move in moves:
+        posAfterMove = (x + move[0], y + move[1])
+        if distMap[posAfterMove[1]][posAfterMove[0]] < min:
+            min = distMap[posAfterMove[1]][posAfterMove[0]]
+            bestMove = posAfterMove
 
-def GenerateDjikstraMap():
-   # map = {}
-   # for x in range(LARGEUR):
-   #    for y in range(HAUTEUR):
-   #       map[f"{x},{y}"] = {}
-   #       map[f"{x},{y}"][f"{x},{y-1}"] = 1 if (TBL[x][y-1] == 0) else math.INF
-   #       map[f"{x},{y}"][f"{x},{y+1}"] = 1 if (TBL[x][y+1] == 0) else math.INF
-   #       map[f"{x},{y}"][f"{x-1},{y}"] = 1 if (TBL[x-1][y] == 0) else math.INF
-   #       map[f"{x},{y}"][f"{x+1},{y}"] = 1 if (TBL[x+1][y] == 0) else math.INF
+    return bestMove
 
-   map = []
-   for y in range(HAUTEUR):
-      map.append([])
-      for x in range(LARGEUR):
-         map[y].append(1 if TBL[x][y] == 0 else math.inf)
-         
-   for row in map:
-      print(row)
+def possibleDirections(weightMap, visitedMap, case):
+    directions = []
+    x = case["x"]
+    y = case["y"]
+    dist = case["dist"]
+    # Check en bas
+    if y < HAUTEUR-1 and weightMap[y+1][x] != math.inf and not visitedMap[y][x]:
+        directions.append({
+                "x": x,
+                "y": y + 1,
+                "dist": dist + weightMap[y + 1][x],
+            })
+    # Check à gauche
+    if x > 0 and weightMap[y][x - 1] != math.inf and not visitedMap[y][x]:
+        directions.append({
+                "x": x - 1,
+                "y": y,
+                "dist": dist + weightMap[y][x - 1],
+            })
+    # Check en haut
+    if y > 0 and weightMap[y-1][x] != math.inf and not visitedMap[y][x]:
+        directions.append({
+                "x": x,
+                "y": y - 1,
+                "dist": dist + weightMap[y - 1][x],
+            })
+    # Check à droite
+    if x < LARGEUR-1 and weightMap[y][x + 1] != math.inf and not visitedMap[y][x]:
+        directions.append({
+                "x": x + 1,
+                "y": y,
+                "dist": dist + weightMap[y][x + 1],
+            })
+    return directions
 
+def checkPaths(initialX, initialY, case, paths, shortestDist, gumMap, weightMap, visitedMap, distMap):
+    x = case["x"]
+    y = case["y"]
+    dist = case["dist"]
+
+    if gumMap[x][y] == 1:
+        if dist < distMap[initialY][initialX]:
+            distMap[initialY][initialX] = dist
+            shortestDist = dist
+
+    elif dist < shortestDist:
+        paths += possibleDirections(weightMap, visitedMap, case)
+
+    visitedMap[y][x] = True
+    paths.remove(case)
+    if len(paths) == 0: return
+
+    for path in paths:
+        checkPaths(initialX, initialY, paths[0], paths, shortestDist, gumMap, weightMap, visitedMap, distMap)
+
+def caseDistFromGum(weightMap, visitedMap, gumMap, distMap, x, y):
+    shortestDist = math.inf
+    visitedMap = generateVisitedMap()
+    case = {"x": x, "y": y, "dist": 0}
+    paths = [case] + possibleDirections(weightMap, visitedMap, case)
+    checkPaths(x, y, case, paths, shortestDist, gumMap, weightMap, visitedMap, distMap)
+
+WEIGHT_MAP = generateWeightMap()
 
 def IAPacman():
-   global PacManPos, Ghosts, Score
-   # déplacement Pacman
-   L = PacManPossibleMove()
-   choix = random.randrange(len(L))
-   PacManPos[0] += L[choix][0]
-   PacManPos[1] += L[choix][1]
-   
-   # Position x du Pac-Man : PacManPos[0]
-   # Position y du Pac-Man : PacManPos[1] 
-   if GUM[PacManPos[0]][PacManPos[1]] == 1:
-      Score += 100
-      GUM[PacManPos[0]][PacManPos[1]] = 0
-      
-   # Permet d'afficher des informations sur la grille
-   for x in range(LARGEUR):
-      for y in range(HAUTEUR):
-         info = x
-         if   x % 3 == 1 : info = "+∞"
-         elif x % 3 == 2 : info = ""
-         SetInfo1(x,y,info)
-   
+    global PacManPos, Ghosts, Score, GUM
+
+    # Génère la carte des distances vers les gums
+    distMap = generateDistMap()    
+    for y in range(HAUTEUR):
+        for x in range(LARGEUR):
+            if (WEIGHT_MAP[y][x] != math.inf):
+                visitedMap = generateVisitedMap()
+                caseDistFromGum(WEIGHT_MAP, visitedMap, GUM, distMap, x, y)
+
+    # Permet d'afficher des informations sur la grille
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR):
+            info = distMap[y][x]
+            # if info == math.inf: info = ""
+            SetInfo1(x,y,info)
+
+    # déplacement Pacman
+    L = PacManPossibleMoves()
+    PacManPos = GetBestMove(distMap, PacManPos, L)
+
+    # Position x du Pac-Man : PacManPos[0]
+    # Position y du Pac-Man : PacManPos[1] 
+    if GUM[PacManPos[0]][PacManPos[1]] == 1:
+        Score += 100
+        GUM[PacManPos[0]][PacManPos[1]] = 0
+
+
 # Déplacement des fantomes
 def IAGhosts():
    for F in Ghosts:
-      L = GhostsPossibleMove(F[0],F[1])
+      L = GhostsPossibleMoves(F[0],F[1])
       choix = random.randrange(len(L))
       F[0] += L[choix][0]
       F[1] += L[choix][1]
@@ -381,5 +468,4 @@ def PlayOneTurn():
 #endregion
 
 # Démarrage de la fenêtre - ne pas toucher
-GenerateDjikstraMap()
 Window.mainloop()
