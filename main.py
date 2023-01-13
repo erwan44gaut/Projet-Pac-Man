@@ -53,13 +53,13 @@ HAUTEUR = TBL.shape [1]
 
 def generateGumMap():
     GUM = np.zeros(TBL.shape, dtype=np.int32)
-    GUM[4][3] = 1
-    GUM[1][1] = 1
+    # GUM[4][3] = 1
+    # GUM[1][1] = 1
     # Met un 1 quand il y a un bonbon
-    # for x in range(LARGEUR):
-    #     for y in range(HAUTEUR):
-    #         if ( TBL[x][y] == 0):
-    #             GUM[x][y] = 1
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR):
+            if ( TBL[x][y] == 0):
+                GUM[x][y] = 1
     return GUM
 
 GUM = generateGumMap()   
@@ -92,12 +92,13 @@ def generateDistMap():
 
 # Initialisation de la position de départ de Pac-Man
 PacManPos = [5,5]
+PacManState = "GUM"
 
 Ghosts  = []
-# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  ] )
-# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange"] )
-# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  ] )
-# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   ] )         
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  , "UP"] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange", "UP"] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  , "UP"] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   , "UP"] )         
 
 #########################################################################
 # Debug : ne pas toucher (affichage des valeurs autours dans les cases) #
@@ -311,7 +312,7 @@ AfficherPage(0)
 
 #endregion
 
-#region Partie
+#region Gestion de partie
 
 ###############################################################################
 #                                                                             #
@@ -329,21 +330,81 @@ def PacManPossibleMoves():
     if ( TBL[x-1][ y ] == 0 ): L.append((-1,0))  
     return L
 
+def isInCorridor(x, y):
+    # Regarder N cases plus loin plûtot que 1
+
+    # couloir horizontal
+    if TBL[x][y+1] != 0 and TBL[x][y-1] != 0 and TBL[x-1][y] == 0 and TBL[x+1][y] == 0:
+        return "HORIZONTAL"
+    # couloir vertical
+    if TBL[x+1][y] != 0 and TBL[x-1][y] != 0 and TBL[x][y-1] == 0 and TBL[x][y+1] == 0:
+        return "VERTICAL"
+    # pas dans un couloir
+    return False
+
 # Renvoie la liste des mouvements possibles d'un fantome
-def GhostsPossibleMoves(x,y):
+def GhostsPossibleMoves(ghost):
+    x = ghost[0]
+    y = ghost[1]
+    dir = ghost[3]
+
     L = []
-    if ( TBL[x  ][y-1] == 2 ): L.append((0,-1))
-    if ( TBL[x  ][y+1] == 2 ): L.append((0, 1))
-    if ( TBL[x+1][y  ] == 2 ): L.append(( 1,0))
-    if ( TBL[x-1][y  ] == 2 ): L.append((-1,0))
-    return L
+    # Détermine les options quand le fantome est dans un couloir vertical
+    if isInCorridor(x, y) == "HORIZONTAL":
+        if dir == "UP":
+            return [(1, 0), (-1, 0)]
+        if dir == "DOWN":
+            return [(1, 0), (-1, 0)]
+        if dir == "LEFT":
+            return [(-1, 0)]
+        if dir == "RIGHT":
+            return [(1, 0)]
+        
+    # Détermine les options quand le fantome est dans un couloir horizontal
+    if isInCorridor(x, y) == "VERTICAL":
+        if dir == "UP":
+            return [(0, -1)]
+        if dir == "DOWN":
+            return [(0, 1)]
+        if dir == "LEFT":
+            return [(0, 1), (0, -1)]
+        if dir == "RIGHT":
+            return [(0, 1), (0, -1)]
+        
+    # Si le fantome n'est pas dans un couloir, il choisit arbitrairement dans la mesure du possible
+    # Si aucune option n'est envisageable, (qu'il est dans une impasse) il fait demi tour
+    else:
+        if dir == "UP":
+            if ( TBL[x][y-1] != 1 ): L.append((0, -1))
+            if ( TBL[x-1][y] != 1 ): L.append((-1, 0))
+            if ( TBL[x+1][y] != 1 ): L.append((1, 0))
+            if len(L) == 0 and ( TBL[x][y+1] != 1 ): L.append((0, 1))
+            return L
+        if dir == "DOWN":
+            if ( TBL[x][y+1] != 1 ): L.append((0, 1))
+            if ( TBL[x-1][y] != 1 ): L.append((-1, 0))
+            if ( TBL[x+1][y] != 1 ): L.append((1, 0))
+            if len(L) == 0 and ( TBL[x][y-1] != 1 ): L.append((0, -1))
+            return L
+        if dir == "LEFT":
+            if ( TBL[x-1][y] != 1 ): L.append((-1, 0))
+            if ( TBL[x][y+1] != 1 ): L.append((0, 1))
+            if ( TBL[x][y-1] != 1 ): L.append((0, -1))
+            if len(L) == 0 and ( TBL[x+1][y] != 1 ): L.append((1, 0))
+            return L
+        if dir == "RIGHT":
+            if ( TBL[x+1][y] != 1 ): L.append((1, 0))
+            if ( TBL[x][y+1] != 1 ): L.append((0, 1))
+            if ( TBL[x][y-1] != 1 ): L.append((0, -1))
+            if len(L) == 0 and ( TBL[x-1][y] != 1 ): L.append((-1, 0))
+            return L
 
 # Renvoie le meilleur mouvement parmi une liste en fonction d'une carte de distances
-def GetBestMove(distMap, pos, moves):
+def GetBestMove(distMap, pos, moves, priority="min"):
     min = math.inf
     bestMove = pos
     x, y = pos
-    
+
     for move in moves:
         posAfterMove = (x + move[0], y + move[1])
         if distMap[posAfterMove[1]][posAfterMove[0]] < min:
@@ -431,7 +492,7 @@ def IAPacman():
     for x in range(LARGEUR):
         for y in range(HAUTEUR):
             info = distMap[y][x]
-            # if info == math.inf: info = ""
+            if info == math.inf: info = ""
             SetInfo1(x,y,info)
 
     # déplacement Pacman
@@ -444,26 +505,46 @@ def IAPacman():
         Score += 100
         GUM[PacManPos[0]][PacManPos[1]] = 0
 
+def checkCollisions():
+    global PacManState
+    for ghost in Ghosts:
+        if ghost[0] == PacManPos[0] and ghost[1] == PacManPos[1]:
+            if PacManState != "CHASE":
+                PacManState = "LOST"
+                print(PacManState)
 
 # Déplacement des fantomes
 def IAGhosts():
-   for F in Ghosts:
-      L = GhostsPossibleMoves(F[0],F[1])
-      choix = random.randrange(len(L))
-      F[0] += L[choix][0]
-      F[1] += L[choix][1]
+    global Ghosts
+    for ghost in Ghosts:
+        L = GhostsPossibleMoves(ghost)
+
+        choice = random.randrange(len(L))
+        ghost[0] += L[choice][0]
+        ghost[1] += L[choice][1]
+
+        # met à jour la direction du fantome
+        if (L[choice] == (0, 1)):
+            ghost[3] = "DOWN"
+        elif (L[choice] == (0, -1)):
+            ghost[3] = "UP"
+        elif (L[choice] == (-1, 0)):
+            ghost[3] = "LEFT"
+        elif (L[choice] == (1, 0)):
+            ghost[3] = "RIGHT"
 
 # Boucle principale de votre jeu appelée toutes les 500ms
 iteration = 0
 def PlayOneTurn():
-   global iteration
-   
-   if not PAUSE_FLAG : 
-      iteration += 1
-      if iteration % 2 == 0 :   IAPacman()
-      else:                     IAGhosts()
-   
-   Affiche(PacmanColor = "yellow", message = "message")  
+    global iteration
+
+    if not PAUSE_FLAG and PacManState != "LOST" and PacManState != "WON": 
+        iteration += 1
+        if iteration % 2 == 0 :   IAPacman()
+        else:                     IAGhosts()
+        checkCollisions()
+        
+    Affiche(PacmanColor = "yellow", message = "message")  
 
 #endregion
 
