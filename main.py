@@ -88,6 +88,19 @@ def generateDistMap():
             map[y].append(math.inf)
     return map
 
+def generateGhostMap():
+    # Met un 1 quand il y a un fantome
+    ghostMap = np.zeros(TBL.shape, dtype=np.int32)
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR):
+            isGhost = False
+            for ghost in Ghosts:
+                if ghost[0] == x and ghost[1] == y:
+                    isGhost = True
+                    break
+            ghostMap[x][y] = 1 if isGhost else 0
+    return ghostMap
+
 #endregion
 
 # Initialisation de la position de départ de Pac-Man
@@ -96,9 +109,9 @@ PacManState = "GUM"
 
 Ghosts  = []
 Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  , "UP"] )
-Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange", "UP"] )
-Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  , "UP"] )
-Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   , "UP"] )         
+# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange", "UP"] )
+# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  , "UP"] )
+# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   , "UP"] )         
 
 #########################################################################
 # Debug : ne pas toucher (affichage des valeurs autours dans les cases) #
@@ -140,7 +153,7 @@ def SetInfo2(x,y,info):
 
 ZOOM = 40 # taille d'une case en pixels
 EPAISS = 12 # epaisseur des murs bleus en pixels
-FRAMETIME = 50
+FRAMETIME = 150
 
 screeenWidth = (LARGEUR+1) * ZOOM  
 screenHeight = (HAUTEUR+2) * ZOOM
@@ -448,12 +461,11 @@ def possibleDirections(weightMap, visitedMap, case):
             })
     return directions
 
-def checkPaths(initialX, initialY, case, paths, shortestDist, gumMap, weightMap, visitedMap, distMap):
+def checkPaths(initialX, initialY, case, paths, shortestDist, objectiveMap, weightMap, visitedMap, distMap):
     x = case["x"]
     y = case["y"]
     dist = case["dist"]
-
-    if gumMap[x][y] == 1:
+    if objectiveMap[x][y] == 1:
         if dist < distMap[initialY][initialX]:
             distMap[initialY][initialX] = dist
             shortestDist = dist
@@ -466,14 +478,22 @@ def checkPaths(initialX, initialY, case, paths, shortestDist, gumMap, weightMap,
     if len(paths) == 0: return
 
     for path in paths:
-        checkPaths(initialX, initialY, paths[0], paths, shortestDist, gumMap, weightMap, visitedMap, distMap)
+        checkPaths(initialX, initialY, paths[0], paths, shortestDist, objectiveMap, weightMap, visitedMap, distMap)
 
-def caseDistFromGum(weightMap, visitedMap, gumMap, distMap, x, y):
+def caseDistFromGum(weightMap, gumMap, distMap, x, y):
     shortestDist = math.inf
     visitedMap = generateVisitedMap()
     case = {"x": x, "y": y, "dist": 0}
     paths = [case] + possibleDirections(weightMap, visitedMap, case)
     checkPaths(x, y, case, paths, shortestDist, gumMap, weightMap, visitedMap, distMap)
+
+def caseDistFromGhost(weightMap, ghostsMap, distMap, x, y):
+    shortestDist = math.inf
+    visitedMap = generateVisitedMap()
+    case = {"x": x, "y": y, "dist": 0}
+    paths = [case] + possibleDirections(weightMap, visitedMap, case)
+    checkPaths(x, y, case, paths, shortestDist, ghostsMap, weightMap, visitedMap, distMap)
+
 
 WEIGHT_MAP = generateWeightMap()
 
@@ -481,23 +501,30 @@ def IAPacman():
     global PacManPos, Ghosts, Score, GUM
 
     # Génère la carte des distances vers les gums
-    distMap = generateDistMap()    
+    gumDistMap = generateDistMap()
+    ghostDistMap = generateDistMap()
+    ghostMap = generateGhostMap()
+
     for y in range(HAUTEUR):
         for x in range(LARGEUR):
             if (WEIGHT_MAP[y][x] != math.inf):
-                visitedMap = generateVisitedMap()
-                caseDistFromGum(WEIGHT_MAP, visitedMap, GUM, distMap, x, y)
-
+                caseDistFromGum(WEIGHT_MAP, GUM, gumDistMap, x, y)
+                caseDistFromGhost(WEIGHT_MAP, ghostMap, ghostDistMap, x, y)
+                
     # Permet d'afficher des informations sur la grille
     for x in range(LARGEUR):
         for y in range(HAUTEUR):
-            info = distMap[y][x]
-            if info == math.inf: info = ""
-            SetInfo1(x,y,info)
+            # info = gumDistMap[y][x]
+            # if info == math.inf: info = ""
+            # SetInfo1(x,y,info)
+
+            info2 = ghostDistMap[y][x]
+            if info2 == math.inf: info = ""
+            SetInfo2(x,y,info2)
 
     # déplacement Pacman
     L = PacManPossibleMoves()
-    PacManPos = GetBestMove(distMap, PacManPos, L)
+    PacManPos = GetBestMove(gumDistMap, PacManPos, L)
 
     # Position x du Pac-Man : PacManPos[0]
     # Position y du Pac-Man : PacManPos[1] 
@@ -511,7 +538,6 @@ def checkCollisions():
         if ghost[0] == PacManPos[0] and ghost[1] == PacManPos[1]:
             if PacManState != "CHASE":
                 PacManState = "LOST"
-                print(PacManState)
 
 # Déplacement des fantomes
 def IAGhosts():
