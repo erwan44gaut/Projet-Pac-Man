@@ -109,9 +109,9 @@ PacManState = "GUM"
 
 Ghosts  = []
 Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  , "UP"] )
-# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange", "UP"] )
-# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  , "UP"] )
-# Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   , "UP"] )         
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "orange", "UP"] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "cyan"  , "UP"] )
+Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "red"   , "UP"] )         
 
 #########################################################################
 # Debug : ne pas toucher (affichage des valeurs autours dans les cases) #
@@ -514,13 +514,14 @@ def IAPacman():
     # Permet d'afficher des informations sur la grille
     for x in range(LARGEUR):
         for y in range(HAUTEUR):
-            # info = gumDistMap[y][x]
-            # if info == math.inf: info = ""
-            # SetInfo1(x,y,info)
-
-            info2 = ghostDistMap[y][x]
-            if info2 == math.inf: info = ""
+            info1 = ghostDistMap[y][x]
+            if info1 == math.inf: info1 = ""
+            SetInfo1(x,y,info1)
+            
+            info2 = gumDistMap[y][x]
+            if info2 == math.inf: info2 = ""
             SetInfo2(x,y,info2)
+
 
     # déplacement Pacman
     L = PacManPossibleMoves()
