@@ -53,13 +53,18 @@ HAUTEUR = TBL.shape [1]
 
 def generateGumMap():
     GUM = np.zeros(TBL.shape, dtype=np.int32)
-    # GUM[4][3] = 1
-    # GUM[1][1] = 1
+    GUM[4][3] = 1
+    GUM[1][1] = 1
     # Met un 1 quand il y a un bonbon
     for x in range(LARGEUR):
         for y in range(HAUTEUR):
             if ( TBL[x][y] == 0):
                 GUM[x][y] = 1
+    # Super pac gums
+    GUM[1][1] = 2
+    GUM[LARGEUR-2][1] = 2
+    GUM[1][HAUTEUR-2] = 2
+    GUM[LARGEUR-2][HAUTEUR-2] = 2
     return GUM
 
 GUM = generateGumMap()   
@@ -106,6 +111,7 @@ def generateGhostMap():
 # Initialisation de la position de départ de Pac-Man
 PacManPos = [5,5]
 PacManState = "GUM"
+PacManChaseTimer = 0
 
 Ghosts  = []
 Ghosts.append( [LARGEUR//2, HAUTEUR // 2 ,  "pink"  , "UP"] )
@@ -153,7 +159,7 @@ def SetInfo2(x,y,info):
 
 ZOOM = 40 # taille d'une case en pixels
 EPAISS = 12 # epaisseur des murs bleus en pixels
-FRAMETIME = 150
+FRAMETIME = 50
 
 screeenWidth = (LARGEUR+1) * ZOOM  
 screenHeight = (HAUTEUR+2) * ZOOM
@@ -264,7 +270,12 @@ def Affiche(PacmanColor,message):
                 yy = To(y)
                 e = 5
                 canvas.create_oval(xx-e,yy-e,xx+e,yy+e,fill="orange")
-                
+            elif ( GUM[x][y] == 2):
+                xx = To(x) 
+                yy = To(y)
+                e = 10
+                canvas.create_oval(xx-e,yy-e,xx+e,yy+e,fill="cyan")
+            
     #extra info
     for x in range(LARGEUR):
         for y in range(HAUTEUR):
@@ -414,15 +425,24 @@ def GhostsPossibleMoves(ghost):
 
 # Renvoie le meilleur mouvement parmi une liste en fonction d'une carte de distances
 def GetBestMove(distMap, pos, moves, priority="min"):
-    min = math.inf
     bestMove = pos
     x, y = pos
 
-    for move in moves:
-        posAfterMove = (x + move[0], y + move[1])
-        if distMap[posAfterMove[1]][posAfterMove[0]] < min:
-            min = distMap[posAfterMove[1]][posAfterMove[0]]
-            bestMove = posAfterMove
+    if priority == "min":
+        min = math.inf
+        for move in moves:
+            posAfterMove = (x + move[0], y + move[1])
+            if distMap[posAfterMove[1]][posAfterMove[0]] < min:
+                min = distMap[posAfterMove[1]][posAfterMove[0]]
+                bestMove = posAfterMove
+
+    elif priority == "max":
+        max = 0
+        for move in moves:
+            posAfterMove = (x + move[0], y + move[1])
+            if distMap[posAfterMove[1]][posAfterMove[0]] > max:
+                max = distMap[posAfterMove[1]][posAfterMove[0]]
+                bestMove = posAfterMove
 
     return bestMove
 
@@ -465,7 +485,7 @@ def checkPaths(initialX, initialY, case, paths, shortestDist, objectiveMap, weig
     x = case["x"]
     y = case["y"]
     dist = case["dist"]
-    if objectiveMap[x][y] == 1:
+    if objectiveMap[x][y] != 0:
         if dist < distMap[initialY][initialX]:
             distMap[initialY][initialX] = dist
             shortestDist = dist
@@ -494,11 +514,10 @@ def caseDistFromGhost(weightMap, ghostsMap, distMap, x, y):
     paths = [case] + possibleDirections(weightMap, visitedMap, case)
     checkPaths(x, y, case, paths, shortestDist, ghostsMap, weightMap, visitedMap, distMap)
 
-
 WEIGHT_MAP = generateWeightMap()
 
 def IAPacman():
-    global PacManPos, Ghosts, Score, GUM
+    global PacManPos, PacManState, PacManChaseTimer, Ghosts, Score, GUM
 
     # Génère la carte des distances vers les gums
     gumDistMap = generateDistMap()
@@ -517,28 +536,55 @@ def IAPacman():
             info1 = ghostDistMap[y][x]
             if info1 == math.inf: info1 = ""
             SetInfo1(x,y,info1)
-            
+
             info2 = gumDistMap[y][x]
             if info2 == math.inf: info2 = ""
             SetInfo2(x,y,info2)
 
 
+    # mode de déplacement
+    if PacManState == "CHASE" and PacManChaseTimer < 16:
+        PacManChaseTimer +=1
+        if PacManChaseTimer == 16-1:
+            PacManState = "FLEE"
+            PacManChaseTimer = 0
+
+    if PacManState != "CHASE":
+        if ghostDistMap[PacManPos[1]][PacManPos[0]] <= 3:
+            PacManState = "FLEE"
+        else:
+            PacManState = "GUM"
+    
     # déplacement Pacman
     L = PacManPossibleMoves()
-    PacManPos = GetBestMove(gumDistMap, PacManPos, L)
+
+    if PacManState == "GUM":
+        PacManPos = GetBestMove(gumDistMap, PacManPos, L)
+    elif PacManState == "CHASE":
+        PacManPos = GetBestMove(ghostDistMap, PacManPos, L, "min")
+    elif PacManState == "FLEE":
+        PacManPos = GetBestMove(ghostDistMap, PacManPos, L, "max")
 
     # Position x du Pac-Man : PacManPos[0]
     # Position y du Pac-Man : PacManPos[1] 
     if GUM[PacManPos[0]][PacManPos[1]] == 1:
         Score += 100
         GUM[PacManPos[0]][PacManPos[1]] = 0
+    if GUM[PacManPos[0]][PacManPos[1]] == 2:
+        Score += 100
+        GUM[PacManPos[0]][PacManPos[1]] = 0
+        PacManState = "CHASE"
 
 def checkCollisions():
-    global PacManState
+    global PacManState, Score
     for ghost in Ghosts:
         if ghost[0] == PacManPos[0] and ghost[1] == PacManPos[1]:
             if PacManState != "CHASE":
                 PacManState = "LOST"
+            else:
+                Score += 2000
+                ghost[0] = LARGEUR//2
+                ghost[1] = HAUTEUR//2
 
 # Déplacement des fantomes
 def IAGhosts():
@@ -560,18 +606,39 @@ def IAGhosts():
         elif (L[choice] == (1, 0)):
             ghost[3] = "RIGHT"
 
+def checkWin():
+    won = True
+    for x in range(LARGEUR):
+        for y in range(HAUTEUR):
+            if GUM[x][y] != 0:
+                won = False
+    return won
+    
 # Boucle principale de votre jeu appelée toutes les 500ms
 iteration = 0
 def PlayOneTurn():
-    global iteration
-
-    if not PAUSE_FLAG and PacManState != "LOST" and PacManState != "WON": 
+    global iteration, PacManState
+    
+    if checkWin() == True: PacManState = "WON"
+    if not PAUSE_FLAG and not (PacManState == "LOST" or PacManState == "WON"): 
         iteration += 1
         if iteration % 2 == 0 :   IAPacman()
         else:                     IAGhosts()
         checkCollisions()
         
-    Affiche(PacmanColor = "yellow", message = "message")  
+    message = ""
+    if (PacManState == "WON"):
+        message = "Pac man won !"
+    elif (PacManState == "LOST"):
+        message = "Pac man lost..."
+    elif (PacManState == "GUM"):
+        message = "Pac man is looking for gum"
+    elif (PacManState == "CHASE"):
+        message = "Pac man is chasing ghosts"
+    elif (PacManState == "FLEE"):
+        message = "Pac man is fleeing from ghosts"
+           
+    Affiche(PacmanColor = "yellow" if PacManState != "CHASE" else "cyan", message = message)  
 
 #endregion
 
